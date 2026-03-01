@@ -1,8 +1,6 @@
 {
   "go.lintTool": "golangci-lint",
-  "go.lintFlags": [
-    "--fast"
-  ],
+  "go.lintFlags": ["--fast"],
   "go.formatTool": "goimports",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
@@ -11,5 +9,6 @@
   "[go]": {
     "editor.defaultFormatter": "golang.go",
     "editor.tabSize": 4
-  }
+  },
+  "files.insertFinalNewline": true
 }
