@@ -47,3 +47,15 @@ func (h *AnalysisHandler) Create(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusCreated, analisis)
 }
+
+func (h *AnalysisHandler) List(ctx *gin.Context) {
+	userID := "f020df2e-6682-401b-b9f0-7567c7935534"
+
+	analyses, err := h.analysisRepo.GetAllByUserID(userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch analyses"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, analyses)
+}
