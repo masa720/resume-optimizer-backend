@@ -3,11 +3,12 @@
   "go.lintFlags": ["--fast"],
   "go.formatTool": "goimports",
   "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": "always"
-  },
   "[go]": {
     "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
     "editor.tabSize": 4
   },
   "files.insertFinalNewline": true
