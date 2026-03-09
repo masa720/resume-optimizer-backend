@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -54,18 +55,32 @@ func (h *ProfileHandler) UpdateProfile(ctx *gin.Context) {
 		return
 	}
 
+	req.Username = strings.TrimSpace(req.Username)
+	if req.Username == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "username is required"})
+		return
+	}
+
 	profile, err := h.profileRepo.GetByID(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "profile not found"})
+			newProfile := &domain.Profile{
+				ID:       userID,
+				Username: req.Username,
+			}
+			if err := h.profileRepo.Update(newProfile); err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create profile"})
+				return
+			}
+			ctx.JSON(http.StatusCreated, newProfile)
 			return
 		}
+
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch profile"})
 		return
 	}
 
 	profile.Username = req.Username
-
 	if err := h.profileRepo.Update(profile); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update profile"})
 		return
