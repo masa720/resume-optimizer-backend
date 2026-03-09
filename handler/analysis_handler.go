@@ -100,12 +100,3 @@ func (h *AnalysisHandler) Delete(ctx *gin.Context) {
 
 	ctx.Status(http.StatusNoContent)
 }
-
-func getUserID(ctx *gin.Context) (string, bool) {
-	userID := ctx.GetString("userID")
-	if userID == "" {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return "", false
-	}
-	return userID, true
-}

@@ -20,8 +20,10 @@ func main() {
 	}
 
 	analysisRepo := repository.NewAnalysisRepository(config.DB)
-
 	analysisHandler := handler.NewAnalysisHandler(analysisRepo)
+
+	profileRepo := repository.NewProfileRepository(config.DB)
+	profileHandler := handler.NewProfileHandler(profileRepo)
 
 	r := gin.Default()
 
@@ -38,6 +40,9 @@ func main() {
 	auth.GET("/analyses", analysisHandler.List)
 	auth.GET("/analyses/:id", analysisHandler.GetByID)
 	auth.DELETE("/analyses/:id", analysisHandler.Delete)
+
+	auth.GET("/profile", profileHandler.GetProfile)
+	auth.PUT("/profile", profileHandler.UpdateProfile)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal("Failed to start server: ", err)
