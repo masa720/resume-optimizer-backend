@@ -32,6 +32,7 @@ func main() {
 
 	r.POST("/analyses", analysisHandler.Create)
 	r.GET("/analyses", analysisHandler.List)
+	r.GET("/analyses/:id", analysisHandler.GetByID)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal("Failed to start server: ", err)

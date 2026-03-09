@@ -59,3 +59,16 @@ func (h *AnalysisHandler) List(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, analyses)
 }
+
+func(h *AnalysisHandler) GetByID(ctx *gin.Context) {
+	userID := "f020df2e-6682-401b-b9f0-7567c7935534"
+	analysisID := ctx.Param("id")
+
+	analysis, err := h.analysisRepo.GetByID(userID, analysisID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "analysis not found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, analysis)
+}
