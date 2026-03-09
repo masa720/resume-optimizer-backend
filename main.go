@@ -8,6 +8,7 @@ import (
 	"github.com/your-username/resume-optimizer-backend/config"
 	"github.com/your-username/resume-optimizer-backend/domain"
 	"github.com/your-username/resume-optimizer-backend/handler"
+	"github.com/your-username/resume-optimizer-backend/middleware"
 	"github.com/your-username/resume-optimizer-backend/repository"
 )
 
@@ -30,10 +31,13 @@ func main() {
 		})
 	})
 
-	r.POST("/analyses", analysisHandler.Create)
-	r.GET("/analyses", analysisHandler.List)
-	r.GET("/analyses/:id", analysisHandler.GetByID)
-	r.DELETE("/analyses/:id", analysisHandler.Delete)
+	auth := r.Group("/")
+	auth.Use(middleware.AuthMiddleware())
+
+	auth.POST("/analyses", analysisHandler.Create)
+	auth.GET("/analyses", analysisHandler.List)
+	auth.GET("/analyses/:id", analysisHandler.GetByID)
+	auth.DELETE("/analyses/:id", analysisHandler.Delete)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal("Failed to start server: ", err)
