@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -8,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/your-username/resume-optimizer-backend/domain"
+	"github.com/your-username/resume-optimizer-backend/service"
 )
 
 type AnalysisHandler struct {
@@ -38,13 +40,27 @@ func (h *AnalysisHandler) Create(ctx *gin.Context) {
 		return
 	}
 
+	keywords := service.ExtractKeywords(req.JobDescription)
+	matchedKeywords, missingKeywords := service.MatchKeywords(keywords, req.ResumeText)
+	score := service.CalculateMatchScore(len(matchedKeywords), len(missingKeywords))
+	suggestions := service.GenerateSuggestions(missingKeywords)
+
+	suggestionsJSON, err := json.Marshal(suggestions)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate suggestions"})
+		return
+	}
+
 	analisis := &domain.Analysis{
-		UserID:         userID,
-		JobDescription: req.JobDescription,
-		ResumeText:     req.ResumeText,
-		CompanyName:    req.CompnayName,
-		JobPosition:    req.JobPosition,
-		MatchScore:     0,
+		UserID:          userID,
+		JobDescription:  req.JobDescription,
+		ResumeText:      req.ResumeText,
+		CompanyName:     req.CompnayName,
+		JobPosition:     req.JobPosition,
+		MatchScore:      score,
+		MatchedKeywords: matchedKeywords,
+		MissingKeywords: missingKeywords,
+		Suggestions:     suggestionsJSON,
 	}
 
 	if err := h.analysisRepo.Create(analisis); err != nil {
