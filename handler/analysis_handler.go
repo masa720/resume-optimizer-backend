@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"github.com/your-username/resume-optimizer-backend/domain"
 )
@@ -78,7 +80,11 @@ func (h *AnalysisHandler) GetByID(ctx *gin.Context) {
 
 	analysis, err := h.analysisRepo.GetByID(userID, analysisID)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "analysis not found"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "analysis not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch analysis"})
 		return
 	}
 
@@ -94,7 +100,11 @@ func (h *AnalysisHandler) Delete(ctx *gin.Context) {
 	analysisID := ctx.Param("id")
 
 	if err := h.analysisRepo.Delete(userID, analysisID); err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "analysis not found"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "analysis not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete analysis"})
 		return
 	}
 
