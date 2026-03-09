@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -25,6 +26,11 @@ func main() {
 	profileRepo := repository.NewProfileRepository(config.DB)
 	profileHandler := handler.NewProfileHandler(profileRepo)
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	r := gin.Default()
 
 	r.GET("/hello", func(ctx *gin.Context) {
@@ -44,7 +50,7 @@ func main() {
 	auth.GET("/profile", profileHandler.GetProfile)
 	auth.PUT("/profile", profileHandler.UpdateProfile)
 
-	if err := r.Run(":8080"); err != nil {
+	if err := r.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server: ", err)
 	}
 }
