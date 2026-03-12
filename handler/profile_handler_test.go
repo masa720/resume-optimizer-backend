@@ -47,7 +47,7 @@ func setupProfileRouter(repo domain.ProfileRepository) *gin.Engine {
 func TestProfileGetSuccess(t *testing.T) {
 	repo := &mockProfileRepo{
 		getByIDFn: func(userID string) (*domain.Profile, error) {
-			return &domain.Profile{ID: userID, Username: "masaki"}, nil
+			return &domain.Profile{ID: userID, Username: "testUser"}, nil
 		},
 	}
 	r := setupProfileRouter(repo)
@@ -129,7 +129,7 @@ func TestProfileUpdateCreatesWhenMissing(t *testing.T) {
 			return nil, gorm.ErrRecordNotFound
 		},
 		updateFn: func(profile *domain.Profile) error {
-			if profile.ID != "user-1" || profile.Username != "masaki" {
+			if profile.ID != "user-1" || profile.Username != "testUser" {
 				t.Fatalf("unexpected profile payload: %+v", profile)
 			}
 			return nil
@@ -137,7 +137,7 @@ func TestProfileUpdateCreatesWhenMissing(t *testing.T) {
 	}
 	r := setupProfileRouter(repo)
 
-	req := httptest.NewRequest(http.MethodPut, "/profile", bytes.NewBufferString(`{"username":"masaki"}`))
+	req := httptest.NewRequest(http.MethodPut, "/profile", bytes.NewBufferString(`{"username":"testUser"}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -182,7 +182,7 @@ func TestProfileUpdateInternalErrorOnCreate(t *testing.T) {
 	}
 	r := setupProfileRouter(repo)
 
-	req := httptest.NewRequest(http.MethodPut, "/profile", bytes.NewBufferString(`{"username":"masaki"}`))
+	req := httptest.NewRequest(http.MethodPut, "/profile", bytes.NewBufferString(`{"username":"testUser"}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
