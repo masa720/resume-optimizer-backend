@@ -1,4 +1,4 @@
-module github.com/your-username/resume-optimizer-backend
+module github.com/masa720/resume-optimizer-backend
 
 go 1.25.0
 

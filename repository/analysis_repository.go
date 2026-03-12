@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"github.com/your-username/resume-optimizer-backend/domain"
+	"github.com/masa720/resume-optimizer-backend/domain"
 
 	"gorm.io/gorm"
 )
