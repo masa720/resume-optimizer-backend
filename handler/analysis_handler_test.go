@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -9,8 +10,11 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/your-username/resume-optimizer-backend/domain"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
+
+	"github.com/your-username/resume-optimizer-backend/domain"
+	"github.com/your-username/resume-optimizer-backend/service"
 )
 
 type mockAnalysisRepo struct {
@@ -18,6 +22,17 @@ type mockAnalysisRepo struct {
 	getByIDFn      func(userID, analysisID string) (*domain.Analysis, error)
 	getAllByUserFn func(userID string) ([]domain.Analysis, error)
 	deleteFn       func(userID, analysisID string) error
+}
+
+type mockSuggestionProvider struct {
+	generateFn func(ctx context.Context, jobDescription string, resumeText string, missingKeywords pq.StringArray) ([]string, error)
+}
+
+func (m *mockSuggestionProvider) Generate(ctx context.Context, jobDescription string, resumeText string, missingKeywords pq.StringArray) ([]string, error) {
+	if m.generateFn != nil {
+		return m.generateFn(ctx, jobDescription, resumeText, missingKeywords)
+	}
+	return []string{"fallback suggestion"}, nil
 }
 
 func (m *mockAnalysisRepo) Create(analysis *domain.Analysis) error {
@@ -49,9 +64,13 @@ func (m *mockAnalysisRepo) Delete(userID, analysisID string) error {
 }
 
 func setupAnalysisRouter(repo domain.AnalysisRepository) *gin.Engine {
+	return setupAnalysisRouterWithSuggestionProvider(repo, &mockSuggestionProvider{})
+}
+
+func setupAnalysisRouterWithSuggestionProvider(repo domain.AnalysisRepository, provider service.SuggestionProvider) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := NewAnalysisHandler(repo)
+	h := NewAnalysisHandler(repo, provider)
 	auth := func(c *gin.Context) {
 		c.Set("userID", "user-1")
 		c.Next()
@@ -219,7 +238,7 @@ func TestAnalysisDeleteInternalError(t *testing.T) {
 func TestAnalysisUnauthorizedWhenUserMissing(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := NewAnalysisHandler(&mockAnalysisRepo{})
+	h := NewAnalysisHandler(&mockAnalysisRepo{}, &mockSuggestionProvider{})
 	r.GET("/analyses", h.List)
 
 	req := httptest.NewRequest(http.MethodGet, "/analyses", nil)
@@ -236,5 +255,30 @@ func TestAnalysisUnauthorizedWhenUserMissing(t *testing.T) {
 	}
 	if got["error"] != "unauthorized" {
 		t.Fatalf("expected unauthorized error, got %q", got["error"])
+	}
+}
+
+func TestAnalysisCreateFallsBackWhenProviderFails(t *testing.T) {
+	repo := &mockAnalysisRepo{
+		createFn: func(analysis *domain.Analysis) error {
+			return nil
+		},
+	}
+	provider := &mockSuggestionProvider{
+		generateFn: func(ctx context.Context, jobDescription string, resumeText string, missingKeywords pq.StringArray) ([]string, error) {
+			return nil, errors.New("provider down")
+		},
+	}
+	r := setupAnalysisRouterWithSuggestionProvider(repo, provider)
+
+	body := []byte(`{"job_description":"go backend docker","resume_text":"go backend"}`)
+	req := httptest.NewRequest(http.MethodPost, "/analyses", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", w.Code)
 	}
 }

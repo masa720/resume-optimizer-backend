@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,11 +14,15 @@ import (
 )
 
 type AnalysisHandler struct {
-	analysisRepo domain.AnalysisRepository
+	analysisRepo       domain.AnalysisRepository
+	suggestionProvider service.SuggestionProvider
 }
 
-func NewAnalysisHandler(analysisRepo domain.AnalysisRepository) *AnalysisHandler {
-	return &AnalysisHandler{analysisRepo: analysisRepo}
+func NewAnalysisHandler(analysisRepo domain.AnalysisRepository, suggestionProvider service.SuggestionProvider) *AnalysisHandler {
+	return &AnalysisHandler{
+		analysisRepo:       analysisRepo,
+		suggestionProvider: suggestionProvider,
+	}
 }
 
 type createAnalysisRequest struct {
@@ -43,7 +48,18 @@ func (h *AnalysisHandler) Create(ctx *gin.Context) {
 	keywords := service.ExtractKeywords(req.JobDescription)
 	matchedKeywords, missingKeywords := service.MatchKeywords(keywords, req.ResumeText)
 	score := service.CalculateMatchScore(len(matchedKeywords), len(missingKeywords))
-	suggestions := service.GenerateSuggestions(missingKeywords)
+
+	suggestions, err := h.suggestionProvider.Generate(
+		ctx.Request.Context(),
+		req.JobDescription,
+		req.ResumeText,
+		missingKeywords,
+	)
+	if err != nil {
+		// FIXME
+		log.Printf("suggestion provider error: %v", err)
+		suggestions = service.GenerateSuggestions(missingKeywords)
+	}
 
 	suggestionsJSON, err := json.Marshal(suggestions)
 	if err != nil {
