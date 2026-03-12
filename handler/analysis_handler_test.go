@@ -13,8 +13,8 @@ import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 
-	"github.com/your-username/resume-optimizer-backend/domain"
-	"github.com/your-username/resume-optimizer-backend/service"
+	"github.com/masa720/resume-optimizer-backend/domain"
+	"github.com/masa720/resume-optimizer-backend/service"
 )
 
 type mockAnalysisRepo struct {

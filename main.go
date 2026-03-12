@@ -6,12 +6,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/your-username/resume-optimizer-backend/config"
-	"github.com/your-username/resume-optimizer-backend/domain"
-	"github.com/your-username/resume-optimizer-backend/handler"
-	"github.com/your-username/resume-optimizer-backend/middleware"
-	"github.com/your-username/resume-optimizer-backend/repository"
-	"github.com/your-username/resume-optimizer-backend/service"
+	"github.com/masa720/resume-optimizer-backend/config"
+	"github.com/masa720/resume-optimizer-backend/domain"
+	"github.com/masa720/resume-optimizer-backend/handler"
+	"github.com/masa720/resume-optimizer-backend/middleware"
+	"github.com/masa720/resume-optimizer-backend/repository"
+	"github.com/masa720/resume-optimizer-backend/service"
 )
 
 func main() {

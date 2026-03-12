@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/your-username/resume-optimizer-backend/domain"
+	"github.com/masa720/resume-optimizer-backend/domain"
 
 	"gorm.io/gorm"
 )

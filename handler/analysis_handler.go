@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/your-username/resume-optimizer-backend/domain"
-	"github.com/your-username/resume-optimizer-backend/service"
+	"github.com/masa720/resume-optimizer-backend/domain"
+	"github.com/masa720/resume-optimizer-backend/service"
 )
 
 type AnalysisHandler struct {
