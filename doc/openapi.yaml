@@ -1,0 +1,340 @@
+openapi: 3.0.3
+info:
+  title: Resume Optimizer Backend API
+  version: 1.0.0
+  description: |
+    Backend API for resume analysis and profile management.
+    Authentication uses Supabase JWT Bearer tokens.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://your-render-service.onrender.com
+    description: Render deployment (replace with actual URL)
+
+tags:
+  - name: Health
+  - name: Analyses
+  - name: Profile
+
+paths:
+  /hello:
+    get:
+      tags: [Health]
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Hello World!
+
+  /analyses:
+    post:
+      tags: [Analyses]
+      summary: Create a new resume analysis
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnalysisRequest'
+      responses:
+        '201':
+          description: Analysis created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Analyses]
+      summary: Get analysis history for authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Analysis list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Analysis'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analyses/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Analysis ID (UUID)
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Analyses]
+      summary: Get one analysis by ID
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Analysis details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Analysis not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [Analyses]
+      summary: Delete one analysis by ID
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Analysis not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /profile:
+    get:
+      tags: [Profile]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags: [Profile]
+      summary: Update or create profile username (upsert)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '201':
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateAnalysisRequest:
+      type: object
+      required:
+        - job_description
+        - resume_text
+      properties:
+        job_description:
+          type: string
+          example: Looking for Go backend engineer with REST API, PostgreSQL, Docker, CI/CD
+        resume_text:
+          type: string
+          example: Built REST APIs using Go and PostgreSQL. Improved CI pipeline.
+        company_name:
+          type: string
+          example: Test Inc
+        job_position:
+          type: string
+          example: Backend Engineer
+
+    Analysis:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        job_description:
+          type: string
+        resume_text:
+          type: string
+        company_name:
+          type: string
+        job_position:
+          type: string
+        match_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        matched_keywords:
+          type: array
+          items:
+            type: string
+        missing_keywords:
+          type: array
+          items:
+            type: string
+        suggestions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UpdateProfileRequest:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
+          example: testUser
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: invalid request body
