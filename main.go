@@ -11,6 +11,7 @@ import (
 	"github.com/your-username/resume-optimizer-backend/handler"
 	"github.com/your-username/resume-optimizer-backend/middleware"
 	"github.com/your-username/resume-optimizer-backend/repository"
+	"github.com/your-username/resume-optimizer-backend/service"
 )
 
 func main() {
@@ -21,7 +22,19 @@ func main() {
 	}
 
 	analysisRepo := repository.NewAnalysisRepository(config.DB)
-	analysisHandler := handler.NewAnalysisHandler(analysisRepo)
+
+	var suggestionProvider service.SuggestionProvider
+	openAIKey := os.Getenv("OPENAI_API_KEY")
+	openAIModel := os.Getenv("OPENAI_MODEL")
+	openAIBaseURL := os.Getenv("OPENAI_BASE_URL")
+
+	if openAIKey != "" {
+		suggestionProvider = service.NewOpenAISuggestionProvider(openAIKey, openAIModel, openAIBaseURL)
+	} else {
+		suggestionProvider = service.NewTemplateSuggestionProvider()
+	}
+
+	analysisHandler := handler.NewAnalysisHandler(analysisRepo, suggestionProvider)
 
 	profileRepo := repository.NewProfileRepository(config.DB)
 	profileHandler := handler.NewProfileHandler(profileRepo)
