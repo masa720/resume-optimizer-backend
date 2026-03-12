@@ -28,7 +28,7 @@ func NewAnalysisHandler(analysisRepo domain.AnalysisRepository, suggestionProvid
 type createAnalysisRequest struct {
 	JobDescription string `json:"job_description" binding:"required"`
 	ResumeText     string `json:"resume_text" binding:"required"`
-	CompnayName    string `json:"company_name"`
+	CompanyName    string `json:"company_name"`
 	JobPosition    string `json:"job_position"`
 }
 
@@ -47,7 +47,7 @@ func (h *AnalysisHandler) Create(ctx *gin.Context) {
 
 	keywords := service.ExtractKeywords(req.JobDescription)
 	matchedKeywords, missingKeywords := service.MatchKeywords(keywords, req.ResumeText)
-	score := service.CalculateMatchScore(len(matchedKeywords), len(missingKeywords))
+	score := service.CalculateMatchScore(len(matchedKeywords), len(matchedKeywords)+len(missingKeywords))
 
 	suggestions, err := h.suggestionProvider.Generate(
 		ctx.Request.Context(),
@@ -67,11 +67,11 @@ func (h *AnalysisHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	analisis := &domain.Analysis{
+	analysis := &domain.Analysis{
 		UserID:          userID,
 		JobDescription:  req.JobDescription,
 		ResumeText:      req.ResumeText,
-		CompanyName:     req.CompnayName,
+		CompanyName:     req.CompanyName,
 		JobPosition:     req.JobPosition,
 		MatchScore:      score,
 		MatchedKeywords: matchedKeywords,
@@ -79,12 +79,12 @@ func (h *AnalysisHandler) Create(ctx *gin.Context) {
 		Suggestions:     suggestionsJSON,
 	}
 
-	if err := h.analysisRepo.Create(analisis); err != nil {
+	if err := h.analysisRepo.Create(analysis); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create analysis"})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, analisis)
+	ctx.JSON(http.StatusCreated, analysis)
 }
 
 func (h *AnalysisHandler) List(ctx *gin.Context) {
