@@ -282,3 +282,28 @@ func TestAnalysisCreateFallsBackWhenProviderFails(t *testing.T) {
 		t.Fatalf("expected status 201, got %d", w.Code)
 	}
 }
+
+func TestAnalysisCreateCalculatesMatchScoreAgainstAllKeywords(t *testing.T) {
+	var capturedScore int
+	repo := &mockAnalysisRepo{
+		createFn: func(analysis *domain.Analysis) error {
+			capturedScore = analysis.MatchScore
+			return nil
+		},
+	}
+	r := setupAnalysisRouter(repo)
+
+	body := []byte(`{"job_description":"backend docker","resume_text":"backend"}`)
+	req := httptest.NewRequest(http.MethodPost, "/analyses", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", w.Code)
+	}
+	if capturedScore != 50 {
+		t.Fatalf("expected match score 50, got %d", capturedScore)
+	}
+}
