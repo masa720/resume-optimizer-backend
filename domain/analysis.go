@@ -5,6 +5,7 @@ import (
 
 	"github.com/lib/pq"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 type Analysis struct {
@@ -20,6 +21,7 @@ type Analysis struct {
 	Suggestions     datatypes.JSON `json:"suggestions" gorm:"type:jsonb"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 type AnalysisRepository interface {
