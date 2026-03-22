@@ -252,19 +252,19 @@ components:
     CreateAnalysisRequest:
       type: object
       required:
-        - job_description
-        - resume_text
+        - jobDescription
+        - resumeText
       properties:
-        job_description:
+        jobDescription:
           type: string
           example: Looking for Go backend engineer with REST API, PostgreSQL, Docker, CI/CD
-        resume_text:
+        resumeText:
           type: string
           example: Built REST APIs using Go and PostgreSQL. Improved CI pipeline.
-        company_name:
+        companyName:
           type: string
           example: Test Inc
-        job_position:
+        jobPosition:
           type: string
           example: Backend Engineer
 
@@ -274,26 +274,26 @@ components:
         id:
           type: string
           format: uuid
-        user_id:
+        userId:
           type: string
           format: uuid
-        job_description:
+        jobDescription:
           type: string
-        resume_text:
+        resumeText:
           type: string
-        company_name:
+        companyName:
           type: string
-        job_position:
+        jobPosition:
           type: string
-        match_score:
+        matchScore:
           type: integer
           minimum: 0
           maximum: 100
-        matched_keywords:
+        matchedKeywords:
           type: array
           items:
             type: string
-        missing_keywords:
+        missingKeywords:
           type: array
           items:
             type: string
@@ -301,10 +301,10 @@ components:
           type: array
           items:
             type: string
-        created_at:
+        createdAt:
           type: string
           format: date-time
-        updated_at:
+        updatedAt:
           type: string
           format: date-time
 
@@ -325,10 +325,10 @@ components:
           format: uuid
         username:
           type: string
-        created_at:
+        createdAt:
           type: string
           format: date-time
-        updated_at:
+        updatedAt:
           type: string
           format: date-time
 

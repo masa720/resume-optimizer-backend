@@ -26,10 +26,10 @@ func NewAnalysisHandler(analysisRepo domain.AnalysisRepository, suggestionProvid
 }
 
 type createAnalysisRequest struct {
-	JobDescription string `json:"job_description" binding:"required"`
-	ResumeText     string `json:"resume_text" binding:"required"`
-	CompanyName    string `json:"company_name"`
-	JobPosition    string `json:"job_position"`
+	JobDescription string `json:"jobDescription" binding:"required"`
+	ResumeText     string `json:"resumeText" binding:"required"`
+	CompanyName    string `json:"companyName"`
+	JobPosition    string `json:"jobPosition"`
 }
 
 func (h *AnalysisHandler) Create(ctx *gin.Context) {

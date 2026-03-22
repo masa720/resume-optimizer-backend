@@ -91,7 +91,7 @@ func TestAnalysisCreateSuccess(t *testing.T) {
 	}
 	r := setupAnalysisRouter(repo)
 
-	body := []byte(`{"job_description":"go backend","resume_text":"go rest api","company_name":"A","job_position":"B"}`)
+	body := []byte(`{"jobDescription":"go backend","resumeText":"go rest api","companyName":"A","jobPosition":"B"}`)
 	req := httptest.NewRequest(http.MethodPost, "/analyses", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -107,7 +107,7 @@ func TestAnalysisCreateBadRequest(t *testing.T) {
 	repo := &mockAnalysisRepo{}
 	r := setupAnalysisRouter(repo)
 
-	body := []byte(`{"job_description":"missing resume_text"}`)
+	body := []byte(`{"jobDescription":"missing resumeText"}`)
 	req := httptest.NewRequest(http.MethodPost, "/analyses", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -127,7 +127,7 @@ func TestAnalysisCreateInternalError(t *testing.T) {
 	}
 	r := setupAnalysisRouter(repo)
 
-	body := []byte(`{"job_description":"go backend","resume_text":"go rest api"}`)
+	body := []byte(`{"jobDescription":"go backend","resumeText":"go rest api"}`)
 	req := httptest.NewRequest(http.MethodPost, "/analyses", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -271,7 +271,7 @@ func TestAnalysisCreateFallsBackWhenProviderFails(t *testing.T) {
 	}
 	r := setupAnalysisRouterWithSuggestionProvider(repo, provider)
 
-	body := []byte(`{"job_description":"go backend docker","resume_text":"go backend"}`)
+	body := []byte(`{"jobDescription":"go backend docker","resumeText":"go backend"}`)
 	req := httptest.NewRequest(http.MethodPost, "/analyses", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -293,7 +293,7 @@ func TestAnalysisCreateCalculatesMatchScoreAgainstAllKeywords(t *testing.T) {
 	}
 	r := setupAnalysisRouter(repo)
 
-	body := []byte(`{"job_description":"backend docker","resume_text":"backend"}`)
+	body := []byte(`{"jobDescription":"backend docker","resumeText":"backend"}`)
 	req := httptest.NewRequest(http.MethodPost, "/analyses", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
