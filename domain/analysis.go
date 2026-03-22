@@ -10,17 +10,17 @@ import (
 
 type Analysis struct {
 	ID              string         `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	UserID          string         `json:"user_id" gorm:"type:uuid;not null"`
-	JobDescription  string         `json:"job_description" gorm:"not null"`
-	ResumeText      string         `json:"resume_text" gorm:"not null"`
-	CompanyName     string         `json:"company_name"`
-	JobPosition     string         `json:"job_position"`
-	MatchScore      int            `json:"match_score"`
-	MatchedKeywords pq.StringArray `json:"matched_keywords" gorm:"type:text[]"`
-	MissingKeywords pq.StringArray `json:"missing_keywords" gorm:"type:text[]"`
+	UserID          string         `json:"userId" gorm:"type:uuid;not null"`
+	JobDescription  string         `json:"jobDescription" gorm:"not null"`
+	ResumeText      string         `json:"resumeText" gorm:"not null"`
+	CompanyName     string         `json:"companyName"`
+	JobPosition     string         `json:"jobPosition"`
+	MatchScore      int            `json:"matchScore"`
+	MatchedKeywords pq.StringArray `json:"matchedKeywords" gorm:"type:text[]"`
+	MissingKeywords pq.StringArray `json:"missingKeywords" gorm:"type:text[]"`
 	Suggestions     datatypes.JSON `json:"suggestions" gorm:"type:jsonb"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
+	CreatedAt       time.Time      `json:"createdAt"`
+	UpdatedAt       time.Time      `json:"updatedAt"`
 	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
