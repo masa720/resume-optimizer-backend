@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
+	"github.com/masa720/resume-optimizer-backend/domain"
 )
 
 var nonWordRegex = regexp.MustCompile(`[^a-z0-9\s]+`)
@@ -109,6 +110,53 @@ func GenerateSuggestions(missingKeywords pq.StringArray) []string {
 		return suggestions[:5]
 	}
 	return suggestions
+}
+
+// MatchStructuredSkills matches structured skills against resume text using substring matching.
+func MatchStructuredSkills(skills []domain.StructuredSkill, resumeText string) (pq.StringArray, pq.StringArray) {
+	resumeNorm := normalize(resumeText)
+	matched := make(pq.StringArray, 0)
+	missing := make(pq.StringArray, 0)
+
+	for _, skill := range skills {
+		if strings.Contains(resumeNorm, strings.ToLower(skill.Name)) {
+			matched = append(matched, skill.Name)
+		} else {
+			missing = append(missing, skill.Name)
+		}
+	}
+
+	return matched, missing
+}
+
+// CalculateWeightedMatchScore scores with required skills weighted 2x vs preferred skills.
+func CalculateWeightedMatchScore(skills []domain.StructuredSkill, matchedSet map[string]bool) int {
+	if len(skills) == 0 {
+		return 0
+	}
+
+	totalWeight := 0
+	matchedWeight := 0
+	for _, s := range skills {
+		w := 1
+		if s.Importance == "required" {
+			w = 2
+		}
+		totalWeight += w
+		if matchedSet[strings.ToLower(s.Name)] {
+			matchedWeight += w
+		}
+	}
+
+	if totalWeight == 0 {
+		return 0
+	}
+
+	score := int(math.Round(float64(matchedWeight) / float64(totalWeight) * 100))
+	if score > 100 {
+		return 100
+	}
+	return score
 }
 
 func normalize(text string) string {

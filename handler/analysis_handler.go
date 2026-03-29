@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -16,12 +17,14 @@ import (
 type AnalysisHandler struct {
 	analysisRepo       domain.AnalysisRepository
 	suggestionProvider service.SuggestionProvider
+	jdAnalyzer         service.JDAnalyzer
 }
 
-func NewAnalysisHandler(analysisRepo domain.AnalysisRepository, suggestionProvider service.SuggestionProvider) *AnalysisHandler {
+func NewAnalysisHandler(analysisRepo domain.AnalysisRepository, suggestionProvider service.SuggestionProvider, jdAnalyzer service.JDAnalyzer) *AnalysisHandler {
 	return &AnalysisHandler{
 		analysisRepo:       analysisRepo,
 		suggestionProvider: suggestionProvider,
+		jdAnalyzer:         jdAnalyzer,
 	}
 }
 
@@ -45,9 +48,27 @@ func (h *AnalysisHandler) Create(ctx *gin.Context) {
 		return
 	}
 
-	keywords := service.ExtractKeywords(req.JobDescription)
-	matchedKeywords, missingKeywords := service.MatchKeywords(keywords, req.ResumeText)
-	score := service.CalculateMatchScore(len(matchedKeywords), len(matchedKeywords)+len(missingKeywords))
+	var matchedKeywords, missingKeywords []string
+	var score int
+	var structuredSkillsJSON []byte
+
+	jdResult, err := h.jdAnalyzer.Analyze(ctx.Request.Context(), req.JobDescription)
+	if err != nil || jdResult == nil || len(jdResult.Skills) == 0 {
+		if err != nil {
+			log.Printf("JD analyzer error, falling back to keyword extraction: %v", err)
+		}
+		keywords := service.ExtractKeywords(req.JobDescription)
+		matchedKeywords, missingKeywords = service.MatchKeywords(keywords, req.ResumeText)
+		score = service.CalculateMatchScore(len(matchedKeywords), len(matchedKeywords)+len(missingKeywords))
+	} else {
+		matchedKeywords, missingKeywords = service.MatchStructuredSkills(jdResult.Skills, req.ResumeText)
+		matchedSet := make(map[string]bool, len(matchedKeywords))
+		for _, kw := range matchedKeywords {
+			matchedSet[strings.ToLower(kw)] = true
+		}
+		score = service.CalculateWeightedMatchScore(jdResult.Skills, matchedSet)
+		structuredSkillsJSON, _ = json.Marshal(jdResult.Skills)
+	}
 
 	suggestions, err := h.suggestionProvider.Generate(
 		ctx.Request.Context(),
@@ -56,7 +77,6 @@ func (h *AnalysisHandler) Create(ctx *gin.Context) {
 		missingKeywords,
 	)
 	if err != nil {
-		// FIXME
 		log.Printf("suggestion provider error: %v", err)
 		suggestions = service.GenerateSuggestions(missingKeywords)
 	}
@@ -68,15 +88,16 @@ func (h *AnalysisHandler) Create(ctx *gin.Context) {
 	}
 
 	analysis := &domain.Analysis{
-		UserID:          userID,
-		JobDescription:  req.JobDescription,
-		ResumeText:      req.ResumeText,
-		CompanyName:     req.CompanyName,
-		JobPosition:     req.JobPosition,
-		MatchScore:      score,
-		MatchedKeywords: matchedKeywords,
-		MissingKeywords: missingKeywords,
-		Suggestions:     suggestionsJSON,
+		UserID:           userID,
+		JobDescription:   req.JobDescription,
+		ResumeText:       req.ResumeText,
+		CompanyName:      req.CompanyName,
+		JobPosition:      req.JobPosition,
+		MatchScore:       score,
+		MatchedKeywords:  matchedKeywords,
+		MissingKeywords:  missingKeywords,
+		Suggestions:      suggestionsJSON,
+		StructuredSkills: structuredSkillsJSON,
 	}
 
 	if err := h.analysisRepo.Create(analysis); err != nil {
