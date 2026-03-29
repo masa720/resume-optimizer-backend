@@ -31,13 +31,16 @@ func main() {
 	openAIModel := os.Getenv("OPENAI_MODEL")
 	openAIBaseURL := os.Getenv("OPENAI_BASE_URL")
 
+	var jdAnalyzer service.JDAnalyzer
 	if openAIKey != "" {
 		suggestionProvider = service.NewOpenAISuggestionProvider(openAIKey, openAIModel, openAIBaseURL)
+		jdAnalyzer = service.NewOpenAIJDAnalyzer(openAIKey, openAIModel, openAIBaseURL)
 	} else {
 		suggestionProvider = service.NewTemplateSuggestionProvider()
+		jdAnalyzer = &service.FallbackJDAnalyzer{}
 	}
 
-	analysisHandler := handler.NewAnalysisHandler(analysisRepo, suggestionProvider)
+	analysisHandler := handler.NewAnalysisHandler(analysisRepo, suggestionProvider, jdAnalyzer)
 
 	profileRepo := repository.NewProfileRepository(config.DB)
 	profileHandler := handler.NewProfileHandler(profileRepo)
