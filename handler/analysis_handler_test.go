@@ -70,7 +70,7 @@ func setupAnalysisRouter(repo domain.AnalysisRepository) *gin.Engine {
 func setupAnalysisRouterWithSuggestionProvider(repo domain.AnalysisRepository, provider service.SuggestionProvider) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := NewAnalysisHandler(repo, provider, &service.FallbackJDAnalyzer{})
+	h := NewAnalysisHandler(repo, provider, &service.FallbackJDAnalyzer{}, nil)
 	auth := func(c *gin.Context) {
 		c.Set("userID", "user-1")
 		c.Next()
@@ -238,7 +238,7 @@ func TestAnalysisDeleteInternalError(t *testing.T) {
 func TestAnalysisUnauthorizedWhenUserMissing(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := NewAnalysisHandler(&mockAnalysisRepo{}, &mockSuggestionProvider{}, &service.FallbackJDAnalyzer{})
+	h := NewAnalysisHandler(&mockAnalysisRepo{}, &mockSuggestionProvider{}, &service.FallbackJDAnalyzer{}, nil)
 	r.GET("/analyses", h.List)
 
 	req := httptest.NewRequest(http.MethodGet, "/analyses", nil)
