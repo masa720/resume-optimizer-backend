@@ -32,15 +32,17 @@ func main() {
 	openAIBaseURL := os.Getenv("OPENAI_BASE_URL")
 
 	var jdAnalyzer service.JDAnalyzer
+	var unifiedAnalyzer service.UnifiedAnalyzer
 	if openAIKey != "" {
 		suggestionProvider = service.NewOpenAISuggestionProvider(openAIKey, openAIModel, openAIBaseURL)
 		jdAnalyzer = service.NewOpenAIJDAnalyzer(openAIKey, openAIModel, openAIBaseURL)
+		unifiedAnalyzer = service.NewOpenAIUnifiedAnalyzer(openAIKey, openAIModel, openAIBaseURL)
 	} else {
 		suggestionProvider = service.NewTemplateSuggestionProvider()
 		jdAnalyzer = &service.FallbackJDAnalyzer{}
 	}
 
-	analysisHandler := handler.NewAnalysisHandler(analysisRepo, suggestionProvider, jdAnalyzer)
+	analysisHandler := handler.NewAnalysisHandler(analysisRepo, suggestionProvider, jdAnalyzer, unifiedAnalyzer)
 
 	profileRepo := repository.NewProfileRepository(config.DB)
 	profileHandler := handler.NewProfileHandler(profileRepo)

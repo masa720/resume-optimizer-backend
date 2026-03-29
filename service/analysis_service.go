@@ -159,6 +159,74 @@ func CalculateWeightedMatchScore(skills []domain.StructuredSkill, matchedSet map
 	return score
 }
 
+// CalculateSubScores computes category-level match scores from unified analysis skills.
+func CalculateSubScores(skills []domain.StructuredSkill) domain.SubScores {
+	type bucket struct{ matched, total int }
+	hardReq := bucket{}
+	hardPref := bucket{}
+	soft := bucket{}
+
+	for _, s := range skills {
+		switch {
+		case s.Category == "hard" && s.Importance == "required":
+			hardReq.total++
+			if s.Matched {
+				hardReq.matched++
+			}
+		case s.Category == "hard" && s.Importance == "preferred":
+			hardPref.total++
+			if s.Matched {
+				hardPref.matched++
+			}
+		default: // soft
+			soft.total++
+			if s.Matched {
+				soft.matched++
+			}
+		}
+	}
+
+	pct := func(b bucket) int {
+		if b.total == 0 {
+			return 100
+		}
+		return CalculateMatchScore(b.matched, b.total)
+	}
+
+	hardReqScore := pct(hardReq)
+	hardPrefScore := pct(hardPref)
+	softScore := pct(soft)
+
+	// Overall: required hard skills 50%, preferred hard 30%, soft 20%
+	overall := int(math.Round(
+		float64(hardReqScore)*0.50 +
+			float64(hardPrefScore)*0.30 +
+			float64(softScore)*0.20,
+	))
+	if overall > 100 {
+		overall = 100
+	}
+
+	return domain.SubScores{
+		HardSkillRequired:  hardReqScore,
+		HardSkillPreferred: hardPrefScore,
+		SoftSkill:          softScore,
+		Overall:            overall,
+	}
+}
+
+// ExtractMatchedMissing derives matched/missing keyword lists from unified skills.
+func ExtractMatchedMissing(skills []domain.StructuredSkill) (matched, missing []string) {
+	for _, s := range skills {
+		if s.Matched {
+			matched = append(matched, s.Name)
+		} else {
+			missing = append(missing, s.Name)
+		}
+	}
+	return matched, missing
+}
+
 func normalize(text string) string {
 	l := strings.ToLower(text)
 	c := nonWordRegex.ReplaceAllString(l, " ")
