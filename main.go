@@ -4,6 +4,9 @@ import (
 	"log"
 	"os"
 
+	"strings"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"github.com/masa720/resume-optimizer-backend/config"
@@ -45,6 +48,13 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     strings.Split(os.Getenv("CORS_ORIGINS"), ","),
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 
 	r.GET("/hello", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
