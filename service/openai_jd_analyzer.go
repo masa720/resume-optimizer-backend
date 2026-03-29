@@ -95,7 +95,7 @@ func (a *OpenAIJDAnalyzer) Analyze(ctx context.Context, jobDescription string) (
 		return nil, fmt.Errorf("no choices returned from OpenAI")
 	}
 
-	content := strings.TrimSpace(parsed.Choices[0].Message.Content)
+	content := stripMarkdownCodeFence(parsed.Choices[0].Message.Content)
 
 	var result JDAnalyzerResult
 	if err := json.Unmarshal([]byte(content), &result); err != nil {

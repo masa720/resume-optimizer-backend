@@ -116,7 +116,7 @@ func (a *OpenAIUnifiedAnalyzer) Analyze(ctx context.Context, jobDescription, res
 		return nil, fmt.Errorf("no choices returned from OpenAI")
 	}
 
-	content := strings.TrimSpace(parsed.Choices[0].Message.Content)
+	content := stripMarkdownCodeFence(parsed.Choices[0].Message.Content)
 
 	var result UnifiedAnalysisResult
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
