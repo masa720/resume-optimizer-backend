@@ -18,10 +18,13 @@ import (
 )
 
 type mockAnalysisRepo struct {
-	createFn       func(analysis *domain.Analysis) error
-	getByIDFn      func(userID, analysisID string) (*domain.Analysis, error)
-	getAllByUserFn func(userID string) ([]domain.Analysis, error)
-	deleteFn       func(userID, analysisID string) error
+	createFn        func(analysis *domain.Analysis) error
+	getByIDFn       func(userID, analysisID string) (*domain.Analysis, error)
+	getAllByUserFn  func(userID string, query domain.ListQuery) (*domain.ListResult, error)
+	deleteFn        func(userID, analysisID string) error
+	updateStatusFn  func(userID, analysisID, status string) (*domain.Analysis, error)
+	createVersionFn func(version *domain.AnalysisVersion) error
+	getMaxVersionFn func(analysisID string) (int, error)
 }
 
 type mockSuggestionProvider struct {
@@ -49,11 +52,11 @@ func (m *mockAnalysisRepo) GetByID(userID, analysisID string) (*domain.Analysis,
 	return nil, nil
 }
 
-func (m *mockAnalysisRepo) GetAllByUserID(userID string) ([]domain.Analysis, error) {
+func (m *mockAnalysisRepo) GetAllByUserID(userID string, query domain.ListQuery) (*domain.ListResult, error) {
 	if m.getAllByUserFn != nil {
-		return m.getAllByUserFn(userID)
+		return m.getAllByUserFn(userID, query)
 	}
-	return nil, nil
+	return &domain.ListResult{}, nil
 }
 
 func (m *mockAnalysisRepo) Delete(userID, analysisID string) error {
@@ -63,6 +66,27 @@ func (m *mockAnalysisRepo) Delete(userID, analysisID string) error {
 	return nil
 }
 
+func (m *mockAnalysisRepo) UpdateStatus(userID, analysisID, status string) (*domain.Analysis, error) {
+	if m.updateStatusFn != nil {
+		return m.updateStatusFn(userID, analysisID, status)
+	}
+	return &domain.Analysis{Status: status}, nil
+}
+
+func (m *mockAnalysisRepo) CreateVersion(version *domain.AnalysisVersion) error {
+	if m.createVersionFn != nil {
+		return m.createVersionFn(version)
+	}
+	return nil
+}
+
+func (m *mockAnalysisRepo) GetMaxVersion(analysisID string) (int, error) {
+	if m.getMaxVersionFn != nil {
+		return m.getMaxVersionFn(analysisID)
+	}
+	return 0, nil
+}
+
 func setupAnalysisRouter(repo domain.AnalysisRepository) *gin.Engine {
 	return setupAnalysisRouterWithSuggestionProvider(repo, &mockSuggestionProvider{})
 }
@@ -70,7 +94,7 @@ func setupAnalysisRouter(repo domain.AnalysisRepository) *gin.Engine {
 func setupAnalysisRouterWithSuggestionProvider(repo domain.AnalysisRepository, provider service.SuggestionProvider) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := NewAnalysisHandler(repo, provider)
+	h := NewAnalysisHandler(repo, provider, &service.FallbackJDAnalyzer{}, nil)
 	auth := func(c *gin.Context) {
 		c.Set("userID", "user-1")
 		c.Next()
@@ -141,8 +165,14 @@ func TestAnalysisCreateInternalError(t *testing.T) {
 
 func TestAnalysisListSuccess(t *testing.T) {
 	repo := &mockAnalysisRepo{
-		getAllByUserFn: func(userID string) ([]domain.Analysis, error) {
-			return []domain.Analysis{{ID: "a1"}, {ID: "a2"}}, nil
+		getAllByUserFn: func(userID string, query domain.ListQuery) (*domain.ListResult, error) {
+			return &domain.ListResult{
+				Data:       []domain.Analysis{{ID: "a1"}, {ID: "a2"}},
+				TotalCount: 2,
+				Page:       query.Page,
+				Limit:      query.Limit,
+				TotalPages: 1,
+			}, nil
 		},
 	}
 	r := setupAnalysisRouter(repo)
@@ -238,7 +268,7 @@ func TestAnalysisDeleteInternalError(t *testing.T) {
 func TestAnalysisUnauthorizedWhenUserMissing(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := NewAnalysisHandler(&mockAnalysisRepo{}, &mockSuggestionProvider{})
+	h := NewAnalysisHandler(&mockAnalysisRepo{}, &mockSuggestionProvider{}, &service.FallbackJDAnalyzer{}, nil)
 	r.GET("/analyses", h.List)
 
 	req := httptest.NewRequest(http.MethodGet, "/analyses", nil)
@@ -283,11 +313,15 @@ func TestAnalysisCreateFallsBackWhenProviderFails(t *testing.T) {
 	}
 }
 
-func TestAnalysisCreateCalculatesMatchScoreAgainstAllKeywords(t *testing.T) {
-	var capturedScore int
+func TestAnalysisCreateStoresResultInVersion(t *testing.T) {
+	var capturedVersion *domain.AnalysisVersion
 	repo := &mockAnalysisRepo{
 		createFn: func(analysis *domain.Analysis) error {
-			capturedScore = analysis.MatchScore
+			analysis.ID = "analysis-1"
+			return nil
+		},
+		createVersionFn: func(version *domain.AnalysisVersion) error {
+			capturedVersion = version
 			return nil
 		},
 	}
@@ -303,7 +337,13 @@ func TestAnalysisCreateCalculatesMatchScoreAgainstAllKeywords(t *testing.T) {
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected status 201, got %d", w.Code)
 	}
-	if capturedScore != 50 {
-		t.Fatalf("expected match score 50, got %d", capturedScore)
+	if capturedVersion == nil {
+		t.Fatal("expected version to be created")
+	}
+	if capturedVersion.Version != 1 {
+		t.Fatalf("expected version 1, got %d", capturedVersion.Version)
+	}
+	if capturedVersion.MatchScore != 50 {
+		t.Fatalf("expected match score 50, got %d", capturedVersion.MatchScore)
 	}
 }

@@ -139,6 +139,22 @@ func buildSuggestionPrompt(jobDescription, resumeText string, missingKeywords pq
 	)
 }
 
+// stripMarkdownCodeFence removes ```json ... ``` wrappers that OpenAI sometimes adds.
+func stripMarkdownCodeFence(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "```") {
+		// Remove opening line (```json or ```)
+		if idx := strings.Index(s, "\n"); idx != -1 {
+			s = s[idx+1:]
+		}
+		// Remove closing ```
+		if idx := strings.LastIndex(s, "```"); idx != -1 {
+			s = s[:idx]
+		}
+	}
+	return strings.TrimSpace(s)
+}
+
 func parseSuggestions(content string) []string {
 	lines := strings.Split(content, "\n")
 	out := make([]string, 0, 5)

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Resume Optimizer Backend API
-  version: 1.0.0
+  version: 2.0.0
   description: |
     Backend API for resume analysis and profile management.
     Authentication uses Supabase JWT Bearer tokens.
@@ -75,17 +75,64 @@ paths:
     get:
       tags: [Analyses]
       summary: Get analysis history for authenticated user
+      description: Returns paginated analyses with only the latest version per analysis.
       security:
         - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-based)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page (max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: sort
+          in: query
+          description: Column to sort by
+          schema:
+            type: string
+            enum: [created_at, updated_at, status]
+            default: created_at
+        - name: order
+          in: query
+          description: Sort direction
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: company
+          in: query
+          description: Filter by company name (partial match, case-insensitive). OR with position.
+          schema:
+            type: string
+            example: Google
+        - name: position
+          in: query
+          description: Filter by job position (partial match, case-insensitive). OR with company.
+          schema:
+            type: string
+            example: Backend
+        - name: status
+          in: query
+          description: Filter by application status (exact match, AND with other filters)
+          schema:
+            type: string
+            example: applied
       responses:
         '200':
-          description: Analysis list
+          description: Paginated analysis list
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Analysis'
+                $ref: '#/components/schemas/PaginatedAnalyses'
         '401':
           description: Unauthorized
           content:
@@ -111,6 +158,7 @@ paths:
     get:
       tags: [Analyses]
       summary: Get one analysis by ID
+      description: Returns the analysis with all versions ordered by version number ascending.
       security:
         - bearerAuth: []
       responses:
@@ -147,6 +195,111 @@ paths:
       responses:
         '204':
           description: Deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Analysis not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analyses/{id}/versions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Analysis ID (UUID)
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Analyses]
+      summary: Create a new version for an existing analysis
+      description: Re-analyzes the resume against a job description and appends a new version.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVersionRequest'
+      responses:
+        '201':
+          description: Version created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Analysis not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analyses/{id}/status:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Analysis ID (UUID)
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [Analyses]
+      summary: Update analysis application status
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatusRequest'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
           content:
@@ -268,6 +421,29 @@ components:
           type: string
           example: Backend Engineer
 
+    CreateVersionRequest:
+      type: object
+      required:
+        - jobDescription
+        - resumeText
+      properties:
+        jobDescription:
+          type: string
+          example: Looking for Go backend engineer with REST API, PostgreSQL, Docker, CI/CD
+        resumeText:
+          type: string
+          example: Built REST APIs using Go and PostgreSQL. Improved CI pipeline.
+
+    UpdateStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          maxLength: 20
+          example: applied
+
     Analysis:
       type: object
       properties:
@@ -277,13 +453,39 @@ components:
         userId:
           type: string
           format: uuid
-        jobDescription:
-          type: string
-        resumeText:
-          type: string
         companyName:
           type: string
         jobPosition:
+          type: string
+        status:
+          type: string
+          example: not_applied
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisVersion'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AnalysisVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          example: 1
+        jobDescription:
+          type: string
+        resumeText:
           type: string
         matchScore:
           type: integer
@@ -301,12 +503,122 @@ components:
           type: array
           items:
             type: string
+        structuredSkills:
+          type: array
+          items:
+            $ref: '#/components/schemas/StructuredSkill'
+        sectionFeedback:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionFeedback'
+        formatChecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormatCheck'
+        rewrites:
+          type: array
+          items:
+            $ref: '#/components/schemas/RewriteSuggestion'
+        scoreBreakdown:
+          $ref: '#/components/schemas/SubScores'
         createdAt:
           type: string
           format: date-time
-        updatedAt:
+
+    StructuredSkill:
+      type: object
+      properties:
+        name:
           type: string
-          format: date-time
+          example: REST API
+        category:
+          type: string
+          enum: [hard, soft]
+        importance:
+          type: string
+          enum: [required, preferred]
+        matched:
+          type: boolean
+        resumeEvidence:
+          type: string
+
+    SectionFeedback:
+      type: object
+      properties:
+        section:
+          type: string
+          example: Summary
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        feedback:
+          type: string
+
+    FormatCheck:
+      type: object
+      properties:
+        item:
+          type: string
+          example: Standard section headers
+        status:
+          type: string
+          enum: [pass, warning]
+        message:
+          type: string
+
+    RewriteSuggestion:
+      type: object
+      properties:
+        section:
+          type: string
+          example: Summary
+        before:
+          type: string
+        after:
+          type: string
+        reason:
+          type: string
+
+    SubScores:
+      type: object
+      properties:
+        hardSkillRequired:
+          type: integer
+          minimum: 0
+          maximum: 100
+        hardSkillPreferred:
+          type: integer
+          minimum: 0
+          maximum: 100
+        softSkill:
+          type: integer
+          minimum: 0
+          maximum: 100
+        overall:
+          type: integer
+          minimum: 0
+          maximum: 100
+
+    PaginatedAnalyses:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Analysis'
+        totalCount:
+          type: integer
+          example: 6
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        totalPages:
+          type: integer
+          example: 1
 
     UpdateProfileRequest:
       type: object

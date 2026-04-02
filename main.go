@@ -20,7 +20,7 @@ import (
 func main() {
 	config.ConnectDatabase()
 
-	if err := config.DB.AutoMigrate(&domain.Analysis{}, &domain.Profile{}); err != nil {
+	if err := config.DB.AutoMigrate(&domain.Analysis{}, &domain.AnalysisVersion{}, &domain.Profile{}); err != nil {
 		log.Fatal("Failed to migrate database: ", err)
 	}
 
@@ -31,13 +31,18 @@ func main() {
 	openAIModel := os.Getenv("OPENAI_MODEL")
 	openAIBaseURL := os.Getenv("OPENAI_BASE_URL")
 
+	var jdAnalyzer service.JDAnalyzer
+	var unifiedAnalyzer service.UnifiedAnalyzer
 	if openAIKey != "" {
 		suggestionProvider = service.NewOpenAISuggestionProvider(openAIKey, openAIModel, openAIBaseURL)
+		jdAnalyzer = service.NewOpenAIJDAnalyzer(openAIKey, openAIModel, openAIBaseURL)
+		unifiedAnalyzer = service.NewOpenAIUnifiedAnalyzer(openAIKey, openAIModel, openAIBaseURL)
 	} else {
 		suggestionProvider = service.NewTemplateSuggestionProvider()
+		jdAnalyzer = &service.FallbackJDAnalyzer{}
 	}
 
-	analysisHandler := handler.NewAnalysisHandler(analysisRepo, suggestionProvider)
+	analysisHandler := handler.NewAnalysisHandler(analysisRepo, suggestionProvider, jdAnalyzer, unifiedAnalyzer)
 
 	profileRepo := repository.NewProfileRepository(config.DB)
 	profileHandler := handler.NewProfileHandler(profileRepo)
@@ -51,7 +56,7 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     strings.Split(os.Getenv("CORS_ORIGINS"), ","),
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
@@ -68,6 +73,8 @@ func main() {
 	auth.POST("/analyses", analysisHandler.Create)
 	auth.GET("/analyses", analysisHandler.List)
 	auth.GET("/analyses/:id", analysisHandler.GetByID)
+	auth.POST("/analyses/:id/versions", analysisHandler.CreateVersion)
+	auth.PATCH("/analyses/:id/status", analysisHandler.UpdateStatus)
 	auth.DELETE("/analyses/:id", analysisHandler.Delete)
 
 	auth.GET("/profile", profileHandler.GetProfile)
