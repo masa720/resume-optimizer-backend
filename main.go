@@ -54,11 +54,15 @@ func main() {
 
 	r := gin.Default()
 
+	corsOrigins := os.Getenv("CORS_ORIGINS")
+	if corsOrigins == "" {
+		corsOrigins = "*"
+	}
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     strings.Split(os.Getenv("CORS_ORIGINS"), ","),
+		AllowOrigins:     strings.Split(corsOrigins, ","),
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,
+		AllowCredentials: corsOrigins != "*",
 	}))
 
 	r.GET("/hello", func(ctx *gin.Context) {
