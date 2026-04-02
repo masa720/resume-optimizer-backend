@@ -31,13 +31,17 @@ func main() {
 	openAIModel := os.Getenv("OPENAI_MODEL")
 	openAIBaseURL := os.Getenv("OPENAI_BASE_URL")
 
+	openAIEnabled := strings.ToLower(os.Getenv("OPENAI_ENABLED")) == "true"
+
 	var jdAnalyzer service.JDAnalyzer
 	var unifiedAnalyzer service.UnifiedAnalyzer
-	if openAIKey != "" {
+	if openAIKey != "" && openAIEnabled {
+		log.Println("OpenAI integration enabled")
 		suggestionProvider = service.NewOpenAISuggestionProvider(openAIKey, openAIModel, openAIBaseURL)
 		jdAnalyzer = service.NewOpenAIJDAnalyzer(openAIKey, openAIModel, openAIBaseURL)
 		unifiedAnalyzer = service.NewOpenAIUnifiedAnalyzer(openAIKey, openAIModel, openAIBaseURL)
 	} else {
+		log.Println("OpenAI integration disabled, using fallback analyzers")
 		suggestionProvider = service.NewTemplateSuggestionProvider()
 		jdAnalyzer = &service.FallbackJDAnalyzer{}
 	}
